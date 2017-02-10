@@ -4,7 +4,7 @@ from sklearn.ensemble.forest import RandomForestClassifier
 from xgboost import XGBClassifier
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import precision_score, recall_score,confusion_matrix
+from sklearn.metrics import precision_score, recall_score,confusion_matrix, accuracy_score
 from lending_club.loan_prediction.data_transformer import DataTransformer
 import pdb
 
@@ -66,7 +66,7 @@ class LoanPredictor(DataTransformer):
         clf.fit(self.features, self.labels)
         return clf
 
-    def test_train_undersampled_split(self, frac=0.5):
+    def test_train_undersampled_split(self, frac=0.4):
         self.undersample()
         train_undersampled, test_undersampled = train_test_split(self.sampled_data, train_size=0.3,
                                                                  stratify=self.sampled_data.loan_status)
@@ -74,17 +74,18 @@ class LoanPredictor(DataTransformer):
         test = self.model_data.drop(train_undersampled.index)
         return train_undersampled, test
 
-    def train_test(self):
-        train, test = self.test_train_undersampled_split()
+    def train_test(self, train_frac=0.3):
+        train, test = self.test_train_undersampled_split(frac=train_frac)
         X_train, y_train = self.split_labels(train)
         X_test, y_test = self.split_labels(test)
-        self.clf = XGBClassifier(n_estimators=3000, learning_rate=0.1, max_depth=6, min_child_weight=6)
+        self.clf = XGBClassifier(n_estimators=3000, learning_rate=0.1, max_depth=6, min_child_weight=6,colsample_bylevel=0.7, subsample=0.8)
         self.clf.fit(X_train, y_train)
         y_pred = self.clf.predict(X_test)
         prec_score = precision_score(y_test, y_pred)
         rec_score = recall_score(y_test, y_pred)
+        acc_score = accuracy_score(y_test,y_pred)
         cm = confusion_matrix(y_test,y_pred)
-        return cm, {"precision": prec_score, "recall": rec_score}
+        return cm, {"accuracy": acc_score,"precision": prec_score, "recall": rec_score}
 
 
     def feature_importances(self):
